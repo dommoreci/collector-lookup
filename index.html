@@ -1,0 +1,878 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Collector">
+<meta name="theme-color" content="#1a1a18">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>Collector Lookup</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #ffffff; --bg2: #f5f5f4; --bg3: #eeede8;
+    --text: #1a1a18; --text2: #6b6b67; --text3: #9c9a92;
+    --border: rgba(0,0,0,0.12); --border2: rgba(0,0,0,0.22);
+    --info-bg: #e6f1fb; --info-text: #0c447c; --info-border: #185fa5;
+    --success-bg: #eaf3de; --success-text: #27500a;
+    --danger-bg: #fcebeb; --danger-text: #791f1f;
+    --warning-bg: #faeeda; --warning-text: #633806;
+    --radius: 10px; --radius-sm: 7px; --accent: #1a1a18;
+    --safe-top: env(safe-area-inset-top, 0px);
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1c1c1a; --bg2: #262624; --bg3: #2e2e2b;
+      --text: #e8e6de; --text2: #a8a69e; --text3: #6b6967;
+      --border: rgba(255,255,255,0.1); --border2: rgba(255,255,255,0.2);
+      --info-bg: #0c2a45; --info-text: #85b7eb; --info-border: #185fa5;
+      --success-bg: #173404; --success-text: #97c459;
+      --danger-bg: #2d0f0f; --danger-text: #f09595;
+      --warning-bg: #2a1800; --warning-text: #FAC775;
+      --accent: #e8e6de;
+    }
+  }
+  html { height: 100%; }
+  body {
+    height: 100%; background: var(--bg3);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    padding-top: var(--safe-top);
+    padding-bottom: var(--safe-bottom);
+    -webkit-tap-highlight-color: transparent;
+  }
+  #app { max-width: 480px; margin: 0 auto; min-height: 100%; background: var(--bg3); }
+  .screen { display: none; padding: 16px; padding-bottom: calc(16px + var(--safe-bottom)); }
+  .screen.active { display: block; }
+
+  /* Header */
+  .header { padding: 16px 0 20px; }
+  .header h1 { font-size: 22px; font-weight: 600; color: var(--text); margin-bottom: 3px; }
+  .header p { font-size: 13px; color: var(--text2); }
+
+  /* Install banner */
+  #install-banner {
+    display: none; background: var(--info-bg); border: 0.5px solid var(--info-border);
+    border-radius: var(--radius); padding: 12px 14px; margin-bottom: 14px;
+    cursor: pointer;
+  }
+  #install-banner p { font-size: 13px; color: var(--info-text); line-height: 1.4; }
+  #install-banner strong { font-weight: 600; }
+
+  .card { background: var(--bg); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 16px; margin-bottom: 12px; }
+  .card-accent { border-left: 3px solid var(--info-border); border-radius: 0 var(--radius) var(--radius) 0; }
+  .slabel { font-size: 11px; font-weight: 600; color: var(--text3); text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 8px; }
+  .api-box { background: var(--bg2); border-radius: var(--radius); padding: 14px; margin-bottom: 14px; }
+  .api-box label { font-size: 13px; color: var(--text2); display: block; margin-bottom: 6px; }
+  .api-box a { color: var(--info-text); }
+
+  input[type="text"], input[type="password"] {
+    width: 100%; padding: 10px 12px; border: 0.5px solid var(--border2);
+    border-radius: var(--radius-sm); font-size: 14px; background: var(--bg);
+    color: var(--text); font-family: inherit; outline: none;
+    -webkit-appearance: none; appearance: none;
+  }
+  input:focus { border-color: var(--info-border); }
+  .key-hint { font-size: 11px; color: var(--text3); margin-top: 5px; }
+  .key-hint.ok { color: var(--success-text); }
+
+  .toggle { display: grid; gap: 8px; margin-bottom: 14px; }
+  .t2 { grid-template-columns: 1fr 1fr; }
+  .t4 { grid-template-columns: 1fr 1fr 1fr 1fr; }
+  .tbtn {
+    padding: 10px 6px; border: 0.5px solid var(--border2); border-radius: var(--radius-sm);
+    background: var(--bg); font-size: 13px; color: var(--text2); cursor: pointer;
+    font-family: inherit; transition: all .15s; text-align: center; line-height: 1.3;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .tbtn.sel { border-color: var(--info-border); background: var(--info-bg); color: var(--info-text); font-weight: 600; }
+
+  .upload-zone {
+    border: 1.5px dashed var(--border2); border-radius: var(--radius);
+    padding: 40px 20px; text-align: center; cursor: pointer; background: var(--bg2);
+    -webkit-tap-highlight-color: transparent;
+  }
+  .upload-zone:active { background: var(--bg3); }
+  .uz-title { font-size: 16px; font-weight: 500; color: var(--text); margin-bottom: 4px; }
+  .uz-sub { font-size: 13px; color: var(--text2); }
+
+  .btn-primary {
+    width: 100%; padding: 14px; border-radius: var(--radius-sm); border: none;
+    background: var(--accent); color: var(--bg); font-size: 15px; font-weight: 600;
+    cursor: pointer; font-family: inherit; -webkit-tap-highlight-color: transparent;
+  }
+  .btn-primary:active { opacity: 0.8; }
+  .btn-sec {
+    width: 100%; padding: 12px; border-radius: var(--radius-sm);
+    border: 0.5px solid var(--border2); background: var(--bg);
+    font-size: 14px; color: var(--text); cursor: pointer; font-family: inherit;
+  }
+  .back-btn {
+    background: none; border: none; font-size: 13px; color: var(--text2);
+    cursor: pointer; padding: 0 0 16px; font-family: inherit;
+    display: flex; align-items: center; gap: 4px;
+  }
+
+  .prev-img { width: 100%; border-radius: var(--radius); border: 0.5px solid var(--border); margin-bottom: 14px; max-height: 300px; object-fit: cover; display: block; }
+
+  .loading-wrap { text-align: center; padding: 60px 20px; }
+  .spinner { width: 32px; height: 32px; border: 2.5px solid var(--border2); border-top-color: var(--text); border-radius: 50%; animation: spin .7s linear infinite; margin: 0 auto 16px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading-title { font-size: 16px; font-weight: 600; color: var(--text); margin-bottom: 6px; }
+  .loading-step { font-size: 13px; color: var(--text2); }
+  .done-steps { margin-top: 16px; text-align: left; max-width: 260px; margin-left: auto; margin-right: auto; }
+  .done-step { font-size: 12px; color: var(--text3); padding: 2px 0; }
+
+  .price-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 8px; }
+  .pcell { background: var(--bg2); border-radius: var(--radius-sm); padding: 10px 8px; text-align: center; }
+  .plabel { font-size: 10px; color: var(--text3); margin-bottom: 3px; text-transform: uppercase; letter-spacing: 0.05em; }
+  .pval { font-size: 18px; font-weight: 600; color: var(--text); }
+  .pval.big { font-size: 24px; }
+  .price-note { font-size: 11px; color: var(--text3); text-align: center; margin-bottom: 12px; font-style: italic; }
+
+  .badge { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 600; padding: 3px 9px; border-radius: 20px; }
+  .b-up { background: var(--success-bg); color: var(--success-text); }
+  .b-down { background: var(--danger-bg); color: var(--danger-text); }
+  .b-flat { background: var(--bg2); color: var(--text2); }
+  .b-key { background: var(--warning-bg); color: var(--warning-text); }
+  .b-live { background: var(--success-bg); color: var(--success-text); }
+  .b-ai { background: var(--bg2); color: var(--text2); }
+  .b-sth { background: var(--warning-bg); color: var(--warning-text); border: 1px solid #854F0B; }
+  .b-rr { background: var(--success-bg); color: var(--success-text); }
+  .b-sf { background: var(--info-bg); color: var(--info-text); }
+  .b-asking { background: var(--warning-bg); color: var(--warning-text); }
+
+  .drow { display: flex; justify-content: space-between; align-items: center; font-size: 13px; padding: 6px 0; border-bottom: 0.5px solid var(--border); }
+  .drow:last-child { border-bottom: none; }
+  .dlabel { color: var(--text2); }
+  .dval { font-weight: 500; color: var(--text); }
+
+  .conf-bar { height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; margin-top: 8px; }
+  .conf-fill { height: 100%; border-radius: 2px; background: var(--success-text); }
+
+  .listing-row { display: flex; justify-content: space-between; align-items: flex-start; padding: 9px 0; border-bottom: 0.5px solid var(--border); gap: 10px; }
+  .listing-row:last-child { border-bottom: none; }
+  .listing-title { font-size: 12px; color: var(--text); line-height: 1.4; flex: 1; }
+  .listing-meta { font-size: 11px; color: var(--text3); margin-top: 3px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .listing-price { font-size: 14px; font-weight: 600; color: var(--text); white-space: nowrap; text-align: right; }
+  .listing-type { font-size: 11px; color: var(--text3); }
+  .watcher-pill { display: inline-flex; align-items: center; gap: 3px; font-size: 10px; font-weight: 600; padding: 2px 6px; border-radius: 10px; }
+  .w-hot { background: var(--danger-bg); color: var(--danger-text); }
+  .w-warm { background: var(--warning-bg); color: var(--warning-text); }
+  .w-cold { background: var(--bg2); color: var(--text3); }
+
+  .spread-wrap { margin: 12px 0 4px; }
+  .spread-label-row { display: flex; justify-content: space-between; font-size: 11px; color: var(--text3); margin-bottom: 5px; }
+  .spread-track { height: 6px; background: var(--bg2); border-radius: 3px; position: relative; }
+  .spread-sold { height: 100%; border-radius: 3px 0 0 3px; opacity: 0.7; }
+  .spread-note { font-size: 12px; color: var(--text2); margin-top: 8px; line-height: 1.5; padding: 8px 10px; background: var(--bg2); border-radius: var(--radius-sm); }
+  .spread-pct { font-weight: 600; }
+  .spread-good { color: var(--success-text); }
+  .spread-warn { color: var(--warning-text); }
+  .spread-bad { color: var(--danger-text); }
+
+  .ext-link { display: flex; align-items: center; justify-content: space-between; padding: 11px 13px; border: 0.5px solid var(--border); border-radius: var(--radius-sm); text-decoration: none; color: var(--text); margin-bottom: 8px; background: var(--bg); }
+  .ext-link:last-child { margin-bottom: 0; }
+  .ext-link:active { background: var(--bg2); }
+  .ext-name { font-size: 14px; font-weight: 500; color: var(--text); }
+  .ext-sub { font-size: 11px; color: var(--text2); margin-top: 1px; }
+
+  .error-box { background: var(--danger-bg); border-radius: var(--radius-sm); padding: 13px; font-size: 13px; color: var(--danger-text); margin-bottom: 12px; line-height: 1.5; }
+  .trend-row { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text2); padding-top: 12px; border-top: 0.5px solid var(--border); flex-wrap: wrap; }
+  .src-dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; }
+  .dot-live { background: #22c55e; }
+  .dot-ai { background: #94a3b8; }
+  .hint-text { font-size: 11px; color: var(--text3); margin-top: 5px; }
+  .section-divider { display: flex; align-items: center; gap: 8px; margin: 4px 0 10px; }
+  .section-divider::before, .section-divider::after { content: ''; flex: 1; height: 0.5px; background: var(--border); }
+
+  /* Settings screen */
+  .settings-row { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 0.5px solid var(--border); }
+  .settings-row:last-child { border-bottom: none; }
+  .settings-label { font-size: 14px; color: var(--text); font-weight: 500; }
+  .settings-sub { font-size: 12px; color: var(--text2); margin-top: 2px; }
+  .settings-val { font-size: 13px; color: var(--text3); }
+
+  /* Nav bar */
+  .nav { display: flex; background: var(--bg); border-top: 0.5px solid var(--border); position: sticky; bottom: 0; padding-bottom: var(--safe-bottom); }
+  .nav-btn { flex: 1; padding: 10px 0; background: none; border: none; cursor: pointer; font-family: inherit; display: flex; flex-direction: column; align-items: center; gap: 3px; -webkit-tap-highlight-color: transparent; }
+  .nav-btn svg { width: 22px; height: 22px; stroke: var(--text3); fill: none; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+  .nav-btn span { font-size: 10px; color: var(--text3); }
+  .nav-btn.active svg { stroke: var(--text); }
+  .nav-btn.active span { color: var(--text); font-weight: 600; }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- HOME / SCAN -->
+  <div id="s-home" class="screen active">
+    <div class="header">
+      <h1>Collector Lookup</h1>
+      <p>AI identification · asking vs. sold pricing</p>
+    </div>
+
+    <div id="install-banner" onclick="installApp()">
+      <p><strong>Add to Home Screen</strong> for the full app experience — works offline, no browser needed.</p>
+    </div>
+
+    <div class="toggle t2">
+      <button class="tbtn sel" id="home-comic" onclick="setType('comic')">Comic book</button>
+      <button class="tbtn" id="home-hw" onclick="setType('hotwheels')">Hot Wheels</button>
+    </div>
+
+    <input type="file" id="file-camera" accept="image/*" capture="environment" style="display:none" onchange="onFile(this)">
+    <input type="file" id="file-gallery" accept="image/*" style="display:none" onchange="onFile(this)">
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <label for="file-camera" class="upload-zone" style="padding:28px 12px;cursor:pointer;display:block;text-align:center">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--text3)" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" style="display:block;margin:0 auto 10px">
+          <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+          <circle cx="12" cy="13" r="4"/>
+        </svg>
+        <div class="uz-title" style="font-size:14px">Take photo</div>
+        <div class="uz-sub" style="font-size:12px">Camera</div>
+      </label>
+      <label for="file-gallery" class="upload-zone" style="padding:28px 12px;cursor:pointer;display:block;text-align:center">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--text3)" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" style="display:block;margin:0 auto 10px">
+          <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/>
+          <polyline points="21 15 16 10 5 21"/>
+        </svg>
+        <div class="uz-title" style="font-size:14px">Choose photo</div>
+        <div class="uz-sub" style="font-size:12px">Photo library</div>
+      </label>
+    </div>
+  </div>
+
+  <!-- PREVIEW + CONDITION -->
+  <div id="s-preview" class="screen">
+    <button class="back-btn" onclick="show('s-home')">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+      Back
+    </button>
+    <img id="prev-img" class="prev-img" src="" alt="Item photo">
+    <div class="toggle t2" style="margin-bottom:14px">
+      <button class="tbtn" id="pt-comic" onclick="setType('comic')">Comic book</button>
+      <button class="tbtn" id="pt-hw" onclick="setType('hotwheels')">Hot Wheels</button>
+    </div>
+
+    <!-- HW conditions -->
+    <div id="hw-cond" style="display:none">
+      <div class="card" style="margin-bottom:14px">
+        <div class="slabel">Packaging</div>
+        <div class="toggle t2" style="margin-bottom:12px">
+          <button class="tbtn sel" id="pkg-loose" onclick="setPkg('loose')">Loose (off card)</button>
+          <button class="tbtn" id="pkg-carded" onclick="setPkg('carded')">Carded</button>
+        </div>
+        <div id="loose-cond-wrap">
+          <div class="slabel">Car condition</div>
+          <div class="toggle t4">
+            <button class="tbtn" onclick="setCond('hw_loose','Mint',this)">Mint</button>
+            <button class="tbtn sel" onclick="setCond('hw_loose','Excellent',this)">Exc</button>
+            <button class="tbtn" onclick="setCond('hw_loose','Good',this)">Good</button>
+            <button class="tbtn" onclick="setCond('hw_loose','Fair',this)">Fair</button>
+          </div>
+        </div>
+        <div id="carded-cond-wrap" style="display:none">
+          <div class="slabel">Card condition</div>
+          <div class="toggle t4">
+            <button class="tbtn" onclick="setCond('hw_carded','M',this)">M</button>
+            <button class="tbtn sel" onclick="setCond('hw_carded','NM',this)">NM</button>
+            <button class="tbtn" onclick="setCond('hw_carded','VG',this)">VG</button>
+            <button class="tbtn" onclick="setCond('hw_carded','G',this)">G</button>
+          </div>
+          <div class="hint-text">Mint · Near Mint · Very Good · Good</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Comic conditions -->
+    <div id="comic-cond" style="display:none">
+      <div class="card" style="margin-bottom:14px">
+        <div class="slabel">Comic condition</div>
+        <div class="toggle t4">
+          <button class="tbtn" onclick="setCond('comic','NM',this)">NM</button>
+          <button class="tbtn sel" onclick="setCond('comic','VF',this)">VF</button>
+          <button class="tbtn" onclick="setCond('comic','FN',this)">FN</button>
+          <button class="tbtn" onclick="setCond('comic','GD',this)">GD</button>
+        </div>
+        <div class="hint-text" style="margin-bottom:12px">Near Mint · Very Fine · Fine · Good</div>
+        <div class="slabel">Grading status</div>
+        <div class="toggle t2">
+          <button class="tbtn" onclick="setCond('graded','raw',this)">Raw (ungraded)</button>
+          <button class="tbtn sel" onclick="setCond('graded','graded',this)">CGC / CBCS slabbed</button>
+        </div>
+      </div>
+    </div>
+
+    <button class="btn-primary" onclick="runAnalysis()">Identify &amp; find prices</button>
+  </div>
+
+  <!-- LOADING -->
+  <div id="s-loading" class="screen">
+    <div class="loading-wrap">
+      <div class="spinner"></div>
+      <div class="loading-title">Analyzing item</div>
+      <div class="loading-step" id="step-txt">Reading photo...</div>
+      <div class="done-steps" id="done-steps"></div>
+    </div>
+  </div>
+
+  <!-- RESULT -->
+  <div id="s-result" class="screen">
+    <button class="back-btn" onclick="show('s-preview')">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+      Adjust &amp; retry
+    </button>
+    <div id="result-out"></div>
+    <button class="btn-sec" onclick="resetApp()" style="margin-bottom:32px">New lookup</button>
+  </div>
+
+  <!-- SETTINGS -->
+  <div id="s-settings" class="screen">
+    <div class="header">
+      <h1>Settings</h1>
+      <p>API keys are stored securely on this device</p>
+    </div>
+
+    <div class="api-box">
+      <div class="slabel">AI identification</div>
+      <div style="font-size:13px;color:var(--text2);line-height:1.5;padding:10px 0">Your Anthropic API key is stored securely on the server. No setup needed — identification works automatically.</div>
+      <div style="font-size:11px;color:var(--success-text);font-weight:500">Server configured ✓</div>
+    </div>
+
+    <div class="api-box" style="margin-bottom:14px">
+      <div class="slabel">eBay App ID</div>
+      <label>Live listing prices — <a href="https://developer.ebay.com" target="_blank">developer.ebay.com</a></label>
+      <input type="text" id="ebay-key" placeholder="YourName-App-PRD-..." autocomplete="off">
+      <div class="key-hint" id="ebay-hint">Without this, uses AI knowledge only</div>
+    </div>
+
+    <button class="btn-primary" onclick="saveKeysAndConfirm()">Save keys</button>
+    <div id="save-confirm" style="text-align:center;font-size:13px;color:var(--success-text);margin-top:10px;display:none">Keys saved to this device ✓</div>
+
+    <div class="card" style="margin-top:16px">
+      <div class="slabel" style="margin-bottom:10px">About</div>
+      <div class="settings-row">
+        <div><div class="settings-label">Version</div></div>
+        <div class="settings-val">1.0</div>
+      </div>
+      <div class="settings-row">
+        <div><div class="settings-label">Storage</div><div class="settings-sub">Keys stored in IndexedDB on device</div></div>
+        <div class="settings-val">Local only</div>
+      </div>
+      <div class="settings-row" style="border-bottom:none">
+        <div><div class="settings-label">Data sent</div><div class="settings-sub">Photos sent to Anthropic API only</div></div>
+        <div class="settings-val">Per lookup</div>
+      </div>
+    </div>
+
+    <button class="btn-sec" style="margin-top:4px;color:var(--danger-text);border-color:var(--danger-text)" onclick="clearKeys()">Clear saved keys</button>
+  </div>
+
+</div>
+
+<!-- Nav bar — shown on home and settings only -->
+<div class="nav" id="nav-bar">
+  <button class="nav-btn active" id="nav-scan" onclick="navTo('scan')">
+    <svg viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+    <span>Scan</span>
+  </button>
+  <button class="nav-btn" id="nav-settings" onclick="navTo('settings')">
+    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+    <span>Settings</span>
+  </button>
+</div>
+
+<script>
+// ── IndexedDB key storage (persists through iOS Safari cache clears) ──────────
+const DB_NAME = 'collector-db', DB_VER = 1, STORE = 'keys';
+let db = null;
+
+function openDB() {
+  return new Promise((res, rej) => {
+    const req = indexedDB.open(DB_NAME, DB_VER);
+    req.onupgradeneeded = e => e.target.result.createObjectStore(STORE);
+    req.onsuccess = e => { db = e.target.result; res(db); };
+    req.onerror = () => rej(req.error);
+  });
+}
+async function dbGet(key) {
+  if (!db) await openDB();
+  return new Promise((res, rej) => {
+    const tx = db.transaction(STORE, 'readonly');
+    const req = tx.objectStore(STORE).get(key);
+    req.onsuccess = () => res(req.result || '');
+    req.onerror = () => res('');
+  });
+}
+async function dbSet(key, val) {
+  if (!db) await openDB();
+  return new Promise((res, rej) => {
+    const tx = db.transaction(STORE, 'readwrite');
+    tx.objectStore(STORE).put(val, key);
+    tx.oncomplete = res;
+    tx.onerror = () => rej(tx.error);
+  });
+}
+async function dbDel(key) {
+  if (!db) await openDB();
+  return new Promise(res => {
+    const tx = db.transaction(STORE, 'readwrite');
+    tx.objectStore(STORE).delete(key);
+    tx.oncomplete = res;
+  });
+}
+
+// ── App state ─────────────────────────────────────────────
+const state = { type:'comic', pkg:'loose', hw_loose:'Excellent', hw_carded:'NM', comic:'VF', graded:'graded' };
+let imgB64=null, imgMime='image/jpeg', stepTimer=null;
+let deferredInstall = null;
+
+const STEPS = [
+  'Reading photo...',
+  'Identifying with AI...',
+  'Checking Super TH indicators...',
+  'Searching web for lowest price...',
+  'Fetching live eBay listings...',
+  'Building your report...'
+];
+
+// ── PWA install ───────────────────────────────────────────
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  deferredInstall = e;
+  document.getElementById('install-banner').style.display = 'block';
+});
+window.addEventListener('appinstalled', () => {
+  document.getElementById('install-banner').style.display = 'none';
+});
+function installApp() {
+  if (deferredInstall) {
+    deferredInstall.prompt();
+    deferredInstall.userChoice.then(() => {
+      deferredInstall = null;
+      document.getElementById('install-banner').style.display = 'none';
+    });
+  } else {
+    alert('To install: tap the Share button in Safari, then "Add to Home Screen"');
+  }
+}
+
+// ── Service worker registration ───────────────────────────
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+}
+
+// ── Key management ────────────────────────────────────────
+async function loadKeys() {
+  const ek = await dbGet('ebay_key');
+  if (ek) { document.getElementById('ebay-key').value = ek; updateEbayHint(ek); }
+}
+async function saveKeysAndConfirm() {
+  const ek = document.getElementById('ebay-key').value.trim();
+  if (ek) await dbSet('ebay_key', ek);
+  updateEbayHint(ek);
+  const conf = document.getElementById('save-confirm');
+  conf.style.display = 'block';
+  setTimeout(() => conf.style.display = 'none', 2500);
+}
+async function clearKeys() {
+  if (!confirm('Clear saved eBay key from this device?')) return;
+  await dbDel('ebay_key');
+  document.getElementById('ebay-key').value = '';
+  updateEbayHint('');
+}
+function updateAntHint(v) {}
+function updateEbayHint(v) {
+  const el = document.getElementById('ebay-hint');
+  el.textContent = v ? 'Key saved ✓ — live listings + spread analysis enabled' : 'Without this, uses AI knowledge only';
+  el.className = 'key-hint' + (v ? ' ok' : '');
+}
+document.getElementById('ebay-key').addEventListener('input', function() { updateEbayHint(this.value.trim()); });
+
+// ── Navigation ────────────────────────────────────────────
+const NAV_SCREENS = { scan: 's-home', settings: 's-settings' };
+let currentNav = 'scan';
+
+function navTo(tab) {
+  currentNav = tab;
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('nav-' + tab).classList.add('active');
+  show(NAV_SCREENS[tab]);
+  document.getElementById('nav-bar').style.display = 'flex';
+}
+
+function show(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  const isMainScreen = id === 's-home' || id === 's-settings';
+  document.getElementById('nav-bar').style.display = isMainScreen ? 'flex' : 'none';
+  window.scrollTo(0, 0);
+}
+
+// ── Type / condition ──────────────────────────────────────
+function setType(t) {
+  state.type = t;
+  ['home-comic','home-hw','pt-comic','pt-hw'].forEach(id => {
+    const el = document.getElementById(id); if (!el) return;
+    el.classList.toggle('sel', (id.includes('comic') && t==='comic') || (id.includes('hw') && t==='hotwheels'));
+  });
+  const hw = document.getElementById('hw-cond'), cm = document.getElementById('comic-cond');
+  if (hw) hw.style.display = t==='hotwheels' ? 'block' : 'none';
+  if (cm) cm.style.display = t==='comic' ? 'block' : 'none';
+}
+function setPkg(p) {
+  state.pkg = p;
+  document.getElementById('pkg-loose').classList.toggle('sel', p==='loose');
+  document.getElementById('pkg-carded').classList.toggle('sel', p==='carded');
+  document.getElementById('loose-cond-wrap').style.display = p==='loose' ? 'block' : 'none';
+  document.getElementById('carded-cond-wrap').style.display = p==='carded' ? 'block' : 'none';
+}
+function setCond(key, val, btn) {
+  state[key] = val;
+  if (btn) { btn.closest('.toggle').querySelectorAll('.tbtn').forEach(b => b.classList.remove('sel')); btn.classList.add('sel'); }
+}
+function onFile(inp) {
+  const f = inp.files[0]; if (!f) return;
+  imgMime = f.type || 'image/jpeg';
+  const r = new FileReader();
+  r.onload = e => {
+    imgB64 = e.target.result.split(',')[1];
+    document.getElementById('prev-img').src = e.target.result;
+    show('s-preview'); setType(state.type);
+    document.getElementById('hw-cond').style.display = state.type==='hotwheels' ? 'block' : 'none';
+    document.getElementById('comic-cond').style.display = state.type==='comic' ? 'block' : 'none';
+  };
+  r.readAsDataURL(f); inp.value = '';
+}
+function resetApp() { imgB64 = null; navTo('scan'); }
+
+function startSteps() {
+  let i = 0;
+  document.getElementById('step-txt').textContent = STEPS[0];
+  document.getElementById('done-steps').innerHTML = '';
+  stepTimer = setInterval(() => {
+    if (i < STEPS.length - 1) {
+      const d = document.getElementById('done-steps');
+      const div = document.createElement('div'); div.className = 'done-step';
+      div.textContent = '✓ ' + STEPS[i]; d.appendChild(div); i++;
+      document.getElementById('step-txt').textContent = STEPS[i];
+    }
+  }, 1600);
+}
+
+// ── Price helpers ─────────────────────────────────────────
+function getMultiplier() {
+  if (state.type === 'hotwheels') {
+    if (state.pkg === 'loose') return {Mint:.58,Excellent:.45,Good:.30,Fair:.18}[state.hw_loose] || .45;
+    return {M:1.0,NM:.85,VG:.60,G:.35}[state.hw_carded] || .85;
+  }
+  const base = {NM:1.0,VF:.75,FN:.50,GD:.28}[state.comic] || .75;
+  return state.graded === 'graded' ? base : base * 0.75;
+}
+function getCondLabel() {
+  if (state.type === 'hotwheels') return state.pkg === 'loose' ? `Loose · ${state.hw_loose}` : `Carded · ${state.hw_carded}`;
+  return `${state.comic} · ${state.graded === 'graded' ? 'Graded' : 'Raw'}`;
+}
+
+// ── eBay ──────────────────────────────────────────────────
+async function getEbayToken(appId) {
+  try {
+    const r = await fetch('https://api.ebay.com/identity/v1/oauth2/token', {
+      method: 'POST',
+      headers: { 'Authorization': 'Basic ' + btoa(appId + ':' + appId), 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: 'grant_type=client_credentials&scope=https%3A%2F%2Fapi.ebay.com%2Foauth%2Fapi_scope'
+    });
+    return (await r.json()).access_token || null;
+  } catch { return null; }
+}
+async function searchEbay(token, query, catId) {
+  try {
+    const q = query + (state.type==='hotwheels' && state.pkg==='loose' ? ' loose' : '');
+    const r = await fetch(`https://api.ebay.com/buy/browse/v1/item_summary/search?q=${encodeURIComponent(q)}&limit=10&category_ids=${catId}&sort=price&fieldgroups=EXTENDED`, {
+      headers: { 'Authorization': 'Bearer ' + token, 'X-EBAY-C-MARKETPLACE-ID': 'EBAY_US' }
+    });
+    return (await r.json()).itemSummaries || [];
+  } catch { return []; }
+}
+
+// ── Spread ────────────────────────────────────────────────
+function spreadHTML(askingPrices, fairMid) {
+  if (!askingPrices.length || !fairMid) return '';
+  const askMed = askingPrices[Math.floor(askingPrices.length / 2)];
+  const pct = Math.round(((askMed - fairMid) / fairMid) * 100);
+  const absPct = Math.abs(pct);
+  const soldFrac = Math.min(96, Math.round((fairMid / askMed) * 100));
+  let cls = 'spread-warn', msg = '';
+  if (pct <= 10) { cls = 'spread-good'; msg = `Asking prices are close to fair value — this market is efficient.`; }
+  else if (pct <= 40) { cls = 'spread-warn'; msg = `Asking prices run ~${absPct}% above fair value. Room to negotiate at a show.`; }
+  else { cls = 'spread-bad'; msg = `Asking prices are ${absPct}% above completed sales. Most won't sell at these prices — don't overpay.`; }
+  return `
+    <div class="spread-wrap">
+      <div class="spread-label-row">
+        <span>Fair value <strong>$${fairMid.toLocaleString()}</strong></span>
+        <span>Asking median <strong>$${askMed.toLocaleString()}</strong></span>
+      </div>
+      <div class="spread-track" style="background:var(--bg2)">
+        <div class="spread-sold" style="width:${soldFrac}%;background:var(--success-text)"></div>
+      </div>
+      <div class="spread-note"><span class="spread-pct ${cls}">+${absPct}% spread</span> — ${msg}</div>
+    </div>`;
+}
+
+function watcherPill(count) {
+  if (!count || count < 1) return '';
+  const cls = count >= 20 ? 'w-hot' : count >= 5 ? 'w-warm' : 'w-cold';
+  const icon = count >= 20 ? '🔥' : count >= 5 ? '👀' : '·';
+  return `<span class="watcher-pill ${cls}">${icon} ${count} watching</span>`;
+}
+
+// ── Web search for lowest asking price ────────────────────
+async function fetchLowestAskingPrice(itemName, condLabel) {
+  try {
+    const r = await fetch('/.netlify/functions/websearch', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ itemName, condLabel })
+    });
+    if (!r.ok) return null;
+    const d = await r.json();
+    return d.lowest_price ? d : null;
+  } catch { return null; }
+}
+
+// ── Main analysis ─────────────────────────────────────────
+async function runAnalysis() {
+  if (!imgB64) return;
+  show('s-loading'); startSteps();
+
+  const ebayKey = await dbGet('ebay_key');
+  const typeLabel = state.type === 'comic' ? 'comic book' : 'Hot Wheels die-cast car';
+  const catId = state.type === 'comic' ? '259104' : '2389';
+  const condCtx = state.type === 'hotwheels'
+    ? `User says: ${state.pkg==='loose' ? 'LOOSE (off card), car condition: '+state.hw_loose : 'CARDED, card condition: '+state.hw_carded}.`
+    : `User says: comic is ${state.comic} condition, ${state.graded==='graded' ? 'GRADED (CGC/CBCS)' : 'RAW (ungraded)'}.`;
+  const hwRules = state.type === 'hotwheels' ? `
+SUPER TH DETECTION — look for all three:
+1. Real Rider rubber tires (not plastic) — strongest indicator
+2. Spectraflame metallic paint (deep shifting sheen)
+3. TH logo or $ symbol tampo on body
+All three = Super TH. TH logo + plastic wheels = regular TH only.` : '';
+
+  const prompt = `You are an expert collector appraiser for ${typeLabel}s. ${condCtx}${hwRules}
+
+Respond ONLY with valid JSON — no markdown, no code fences.
+{
+  "identified": true/false,
+  "name": "Full item name",
+  "details": "Issue/year/publisher OR year/color/series/casting",
+  "ebay_search_query": "4-6 word eBay query",
+  "heritage_search": "Heritage Auctions search terms",
+  "condition_estimate": "AI visual condition assessment",
+  "grade_equivalent": "e.g. CGC 9.2 or AFA 85",
+  "is_super_th": true/false,
+  "has_real_riders": true/false,
+  "has_spectraflame": true/false,
+  "base_mid_carded_nm": integer,
+  "low": integer (for stated condition),
+  "mid": integer (for stated condition),
+  "high": integer (for stated condition),
+  "trend": "up"/"flat"/"down",
+  "trend_reason": "One sentence",
+  "key_issue": true/false,
+  "key_notes": "Details or empty string",
+  "confidence": 0-100,
+  "watch_out": "One show-floor tip"
+}
+Price low/mid/high for the EXACT user-stated condition.`;
+
+  let ai = null, ebayItems = [], usedLive = false, lowestAsk = null;
+  try {
+    const r = await fetch('/.netlify/functions/analyze', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model: 'claude-opus-4-5-20251101', max_tokens: 1200, messages: [{ role: 'user', content: [
+        { type: 'image', source: { type: 'base64', media_type: imgMime, data: imgB64 } },
+        { type: 'text', text: prompt }
+      ]}]})
+    });
+    if (!r.ok) { const e = await r.json().catch(() => ({})); throw new Error(e.error?.message || `Server error ${r.status} — check Netlify Functions tab`); }
+    const d = await r.json();
+    ai = JSON.parse((d.content || []).map(b => b.text || '').join('').replace(/```json|```/g, '').trim());
+  } catch(e) {
+    clearInterval(stepTimer);
+    document.getElementById('result-out').innerHTML = `<div class="error-box"><strong>Failed</strong><br>${e.message}<br><br>Contact the app owner if this persists.</div>`;
+    show('s-result'); return;
+  }
+
+  // Run web search + eBay fetch in parallel once we have the item name
+  if (ai?.identified) {
+    const condLabel = getCondLabel();
+    const [lowestResult, ebayResult] = await Promise.allSettled([
+      fetchLowestAskingPrice(ai.name, condLabel),
+      (async () => {
+        if (!ebayKey) return [];
+        const token = await getEbayToken(ebayKey);
+        if (!token) return [];
+        return await searchEbay(token, ai.ebay_search_query, catId);
+      })()
+    ]);
+
+    lowestAsk = lowestResult.status === 'fulfilled' ? lowestResult.value : null;
+
+    ebayItems = ebayResult.status === 'fulfilled' ? (ebayResult.value || []) : [];
+    if (ebayItems.length > 0) {
+      usedLive = true;
+      const prices = ebayItems.map(i => parseFloat(i.price?.value || 0)).filter(p => p > 2).sort((a,b) => a-b);
+      if (prices.length >= 2) {
+        const m = getMultiplier();
+        ai.asking_prices = prices;
+        ai.low = Math.round(prices[0] * m);
+        ai.mid = Math.round(prices[Math.floor(prices.length/2)] * m);
+        ai.high = Math.round(prices[prices.length-1] * m);
+      }
+    }
+  }
+
+  clearInterval(stepTimer);
+  renderResult(ai, ebayItems, usedLive, lowestAsk);
+  show('s-result');
+}
+
+// ── Render ────────────────────────────────────────────────
+function renderResult(r, ebayItems, usedLive, lowestAsk) {
+  if (!r || !r.identified) {
+    document.getElementById('result-out').innerHTML = `<div class="card"><div style="font-size:17px;font-weight:600;color:var(--text);margin-bottom:6px">Could not identify item</div><div style="font-size:13px;color:var(--text2);line-height:1.5">Try a clearer photo with good lighting. For comics, capture the full cover. For Hot Wheels, show the tampo and wheel detail.</div></div>`;
+    return;
+  }
+
+  const tC = r.trend==='up'?'b-up':r.trend==='down'?'b-down':'b-flat';
+  const tL = r.trend==='up'?'↑ Trending up':r.trend==='down'?'↓ Softening':'→ Stable';
+  const srcBadge = usedLive
+    ? `<span class="badge b-live"><span class="src-dot dot-live"></span> Live eBay</span>`
+    : `<span class="badge b-ai"><span class="src-dot dot-ai"></span> AI estimate</span>`;
+
+  const sthBadges = r.is_super_th
+    ? `<div style="margin-bottom:10px;display:flex;gap:6px;flex-wrap:wrap">
+        <span class="badge b-sth">Super Treasure Hunt</span>
+        ${r.has_real_riders ? '<span class="badge b-rr">Real Riders ✓</span>' : ''}
+        ${r.has_spectraflame ? '<span class="badge b-sf">Spectraflame ✓</span>' : ''}
+      </div>`
+    : (r.key_issue ? `<div style="margin-bottom:10px"><span class="badge b-key">Key issue</span></div>` : '');
+
+  const refNote = state.type==='hotwheels' && state.pkg==='loose' && r.base_mid_carded_nm
+    ? `<div class="price-note">Carded NM reference ~$${r.base_mid_carded_nm} · adjusted for loose ${state.hw_loose}</div>` : '';
+
+  const keyNotes = (r.key_issue || r.is_super_th) && r.key_notes
+    ? `<div style="font-size:12px;color:var(--text2);line-height:1.5;margin-top:10px;padding-top:10px;border-top:0.5px solid var(--border)">${r.key_notes}</div>` : '';
+
+  const hwDetect = state.type === 'hotwheels' ? `
+    <div class="card">
+      <div class="slabel">Hot Wheels detection</div>
+      <div class="drow"><span class="dlabel">Real Rider wheels</span><span class="dval" style="color:${r.has_real_riders?'var(--success-text)':'var(--text3)'}">${r.has_real_riders?'Detected ✓':'Not detected'}</span></div>
+      <div class="drow"><span class="dlabel">Spectraflame paint</span><span class="dval" style="color:${r.has_spectraflame?'var(--success-text)':'var(--text3)'}">${r.has_spectraflame?'Detected ✓':'Not detected'}</span></div>
+      <div class="drow"><span class="dlabel">Super TH</span><span class="dval" style="color:${r.is_super_th?'var(--warning-text)':'var(--text3)'}">${r.is_super_th?'Confirmed ✓':'Not confirmed'}</span></div>
+      <div class="drow"><span class="dlabel">Your condition</span><span class="dval">${getCondLabel()}</span></div>
+    </div>` : `
+    <div class="card">
+      <div class="slabel">Condition</div>
+      <div class="drow"><span class="dlabel">AI visual estimate</span><span class="dval">${r.condition_estimate}</span></div>
+      <div class="drow"><span class="dlabel">Stated condition</span><span class="dval">${getCondLabel()}</span></div>
+      <div class="drow"><span class="dlabel">Grade equivalent</span><span class="dval">${r.grade_equivalent}</span></div>
+    </div>`;
+
+  const askingPrices = r.asking_prices || [];
+  const listingsHtml = usedLive && ebayItems.length ? `
+    <div class="card">
+      <div class="section-divider"><span class="badge b-asking">Asking prices</span></div>
+      <div style="font-size:11px;color:var(--text3);margin-bottom:10px;line-height:1.4">What sellers want — not necessarily what buyers pay</div>
+      ${ebayItems.slice(0,6).map(item => {
+        const p = parseFloat(item.price?.value || 0);
+        const watchers = item.watchCount || 0;
+        return `<div class="listing-row">
+          <div style="flex:1">
+            <div class="listing-title">${(item.title||'').substring(0,70)}${(item.title||'').length>70?'…':''}</div>
+            <div class="listing-meta"><span>${item.condition||''}</span>${watcherPill(watchers)}</div>
+          </div>
+          <div style="text-align:right;flex-shrink:0">
+            <div class="listing-price">$${p.toFixed(2)}</div>
+            <div class="listing-type">${item.buyingOptions?.[0]||''}</div>
+          </div>
+        </div>`;
+      }).join('')}
+      ${spreadHTML(askingPrices, r.mid)}
+    </div>` : '';
+
+  const hQ = encodeURIComponent(r.heritage_search || r.name);
+  const eQ = encodeURIComponent((r.ebay_search_query || r.name) + (state.type==='hotwheels' && state.pkg==='loose' ? ' loose' : ''));
+  const iQ = encodeURIComponent(r.name);
+  const extIcon = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text3)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>`;
+  const watchTip = r.watch_out ? `<div class="card card-accent"><div class="slabel" style="margin-bottom:5px">Show floor tip</div><div style="font-size:13px;color:var(--text);line-height:1.6">${r.watch_out}</div></div>` : '';
+
+  const lowestAskHtml = lowestAsk?.lowest_price ? `
+    <div class="card" style="border-left:3px solid var(--warning-text);border-radius:0 var(--radius) var(--radius) 0">
+      <div class="slabel" style="margin-bottom:8px">Lowest asking price found</div>
+      <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:6px">
+        <div style="font-size:28px;font-weight:700;color:var(--text)">$${lowestAsk.lowest_price.toLocaleString()}</div>
+        <span class="badge b-asking">${lowestAsk.lowest_source}</span>
+      </div>
+      ${lowestAsk.lowest_title ? `<div style="font-size:12px;color:var(--text2);margin-bottom:6px;line-height:1.4">${lowestAsk.lowest_title}</div>` : ''}
+      ${lowestAsk.search_summary ? `<div style="font-size:11px;color:var(--text3);margin-bottom:10px">${lowestAsk.search_summary}</div>` : ''}
+      ${lowestAsk.lowest_url ? `<a href="${lowestAsk.lowest_url}" target="_blank" rel="noopener" class="ext-link" style="margin-bottom:0">
+        <div><div class="ext-name">View listing</div><div class="ext-sub">Opens in browser</div></div>${extIcon}
+      </a>` : ''}
+    </div>` : '';
+
+  document.getElementById('result-out').innerHTML = `
+    <div class="card">
+      ${sthBadges}
+      <div style="font-size:18px;font-weight:600;color:var(--text);margin-bottom:3px">${r.name}</div>
+      <div style="font-size:13px;color:var(--text2);margin-bottom:16px">${r.details}</div>
+      <div style="font-size:11px;color:var(--text3);margin-bottom:6px;text-transform:uppercase;letter-spacing:.05em;font-weight:600">Fair value · ${getCondLabel()}</div>
+      <div class="price-grid">
+        <div class="pcell"><div class="plabel">Low</div><div class="pval">$${r.low.toLocaleString()}</div></div>
+        <div class="pcell"><div class="plabel">Fair value</div><div class="pval big">$${r.mid.toLocaleString()}</div></div>
+        <div class="pcell"><div class="plabel">High</div><div class="pval">$${r.high.toLocaleString()}</div></div>
+      </div>
+      ${refNote}
+      <div class="trend-row">
+        <span class="badge ${tC}">${tL}</span>
+        <span style="flex:1">${r.trend_reason}</span>
+      </div>
+      ${keyNotes}
+      <div style="display:flex;align-items:center;gap:8px;margin-top:12px;padding-top:10px;border-top:0.5px solid var(--border)">
+        ${srcBadge}
+        <span style="font-size:11px;color:var(--text3)">Confidence ${r.confidence}%</span>
+        <div class="conf-bar" style="flex:1;margin-top:0"><div class="conf-fill" style="width:${r.confidence}%"></div></div>
+      </div>
+    </div>
+
+    ${hwDetect}
+    ${listingsHtml}
+
+    ${lowestAskHtml}
+    <div class="card">
+      <div class="slabel" style="margin-bottom:6px">Completed sales</div>
+      <div style="font-size:11px;color:var(--text3);margin-bottom:10px">What people actually paid — the ground truth</div>
+      <a class="ext-link" href="https://www.ebay.com/sch/i.html?_nkw=${eQ}&LH_Sold=1&LH_Complete=1" target="_blank" rel="noopener">
+        <div><div class="ext-name">eBay sold listings</div><div class="ext-sub">Completed sales · pre-filtered</div></div>${extIcon}
+      </a>
+      <a class="ext-link" href="https://www.ha.com/c/search-results.zx?Ntk=SI_Titles-Desc-Artist&Ntt=${hQ}&LH_Sold=1" target="_blank" rel="noopener">
+        <div><div class="ext-name">Heritage Auctions</div><div class="ext-sub">Realized prices archive</div></div>${extIcon}
+      </a>
+      <a class="ext-link" href="https://www.invaluable.com/search/#m=sold&query=${iQ}" target="_blank" rel="noopener">
+        <div><div class="ext-name">Invaluable Price Archive</div><div class="ext-sub">Your account · auction records</div></div>${extIcon}
+      </a>
+    </div>
+    ${watchTip}`;
+}
+
+// ── Init ──────────────────────────────────────────────────
+openDB().then(loadKeys);
+</script>
+</body>
+</html>
