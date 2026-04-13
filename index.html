@@ -328,6 +328,24 @@
       Adjust &amp; retry
     </button>
     <div id="result-out"></div>
+    <div id="save-section" style="display:none;margin-bottom:12px">
+      <div class="card" style="border:1.5px solid var(--info-border)">
+        <div class="slabel" style="margin-bottom:10px">Save to collection</div>
+        <div class="toggle t2" style="margin-bottom:10px" id="save-table-toggle"></div>
+        <div style="margin-bottom:10px">
+          <div class="slabel" style="margin-bottom:5px">Price paid</div>
+          <input type="number" id="price-paid" placeholder="$0.00" min="0" step="0.01"
+            style="width:100%;padding:10px 12px;border:0.5px solid var(--border2);border-radius:var(--radius-sm);font-size:14px;background:var(--bg);color:var(--text);font-family:inherit">
+        </div>
+        <div style="margin-bottom:12px">
+          <div class="slabel" style="margin-bottom:5px">Location found</div>
+          <input type="text" id="save-location" placeholder="e.g. Estate sale, Napa"
+            style="width:100%;padding:10px 12px;border:0.5px solid var(--border2);border-radius:var(--radius-sm);font-size:14px;background:var(--bg);color:var(--text);font-family:inherit">
+        </div>
+        <button class="btn-primary" id="save-btn" onclick="saveToAirtable()">Save to collection</button>
+        <div id="save-status" style="text-align:center;font-size:13px;margin-top:10px;display:none"></div>
+      </div>
+    </div>
     <button class="btn-sec" onclick="resetApp()" style="margin-bottom:32px">New lookup</button>
   </div>
 
@@ -564,7 +582,7 @@ function onFile(inp) {
   };
   reader.readAsDataURL(f); inp.value = '';
 }
-function resetApp() { imgB64 = null; navTo('scan'); }
+function resetApp() { imgB64 = null; currentResult = null; document.getElementById('save-section').style.display='none'; navTo('scan'); }
 
 function startSteps() {
   let i = 0;
@@ -755,6 +773,7 @@ Price low/mid/high for the EXACT user-stated condition.`;
 
   clearInterval(stepTimer);
   renderResult(ai, ebayItems, usedLive, lowestAsk);
+  if (ai?.identified) buildSaveUI(ai);
   show('s-result');
 }
 
@@ -884,6 +903,110 @@ function renderResult(r, ebayItems, usedLive, lowestAsk) {
       </a>
     </div>
     ${watchTip}`;
+}
+
+// ── Airtable config ───────────────────────────────────────
+const AIRTABLE_BASE = 'appPczKYLAuKzCNw8';
+const TABLES = {
+  comics:    { name: 'Comics',      label: 'Comics',      hw: false },
+  mainline:  { name: 'HW Mainline', label: 'HW Mainline', hw: true  },
+  premium:   { name: 'HW Premium',  label: 'HW Premium',  hw: true  },
+  thsth:     { name: 'HW TH-STH',  label: 'HW TH-STH',   hw: true  },
+  redline:   { name: 'HW Redline',  label: 'HW Redline',  hw: true  },
+  collection:{ name: 'Collection',  label: 'Collection',  hw: false }
+};
+
+let currentResult = null;
+let selectedTable = null;
+
+function suggestTable(result) {
+  if (!result) return 'collection';
+  if (state.type === 'comic') return 'comics';
+  if (result.is_super_th) return 'thsth';
+  if (result.has_spectraflame || (result.name || '').toLowerCase().includes('redline')) return 'redline';
+  if ((result.name || '').toLowerCase().includes('car culture') ||
+      (result.name || '').toLowerCase().includes('premium') ||
+      (result.name || '').toLowerCase().includes('rlc')) return 'premium';
+  return 'mainline';
+}
+
+function buildSaveUI(result) {
+  currentResult = result;
+  selectedTable = suggestTable(result);
+  const toggle = document.getElementById('save-table-toggle');
+  const relevant = Object.entries(TABLES).filter(([k, v]) =>
+    state.type === 'comic' ? (!v.hw || k === 'collection') : (v.hw || k === 'collection')
+  );
+  toggle.innerHTML = relevant.map(([key, tbl]) => `
+    <button class="tbtn${key === selectedTable ? ' sel' : ''}"
+      onclick="selectTable('${key}',this)" style="font-size:12px;padding:8px 4px">
+      ${tbl.label}
+    </button>`).join('');
+  // Make it a grid matching count
+  toggle.style.gridTemplateColumns = `repeat(${relevant.length}, 1fr)`;
+  document.getElementById('save-section').style.display = 'block';
+  document.getElementById('save-status').style.display = 'none';
+  document.getElementById('save-btn').disabled = false;
+  document.getElementById('save-btn').textContent = 'Save to collection';
+}
+
+function selectTable(key, btn) {
+  selectedTable = key;
+  document.querySelectorAll('#save-table-toggle .tbtn').forEach(b => b.classList.remove('sel'));
+  btn.classList.add('sel');
+}
+
+async function saveToAirtable() {
+  if (!currentResult || !selectedTable) return;
+  const btn = document.getElementById('save-btn');
+  const status = document.getElementById('save-status');
+  btn.disabled = true;
+  btn.textContent = 'Saving...';
+  status.style.display = 'none';
+
+  const tbl = TABLES[selectedTable];
+  const pricePaid = parseFloat(document.getElementById('price-paid').value) || 0;
+  const location = document.getElementById('save-location').value.trim();
+
+  const fields = {
+    'Title': currentResult.name || '',
+    'Details': currentResult.details || '',
+    'Condition': getCondLabel(),
+    'Fair Value': currentResult.mid || 0,
+    'Price Paid': pricePaid,
+    'Date Found': new Date().toISOString().split('T')[0],
+    'Location': location,
+    'eBay Search': `https://www.ebay.com/sch/i.html?_nkw=${encodeURIComponent(currentResult.ebay_search_query||currentResult.name||'')}`,
+    'Trend': currentResult.trend || ''
+  };
+
+  // Add Packaging Type for HW tables
+  if (tbl.hw) {
+    fields['Packaging Type'] = state.pkg === 'loose' ? 'Loose' : 'Carded';
+  }
+
+  try {
+    const r = await fetch('/.netlify/functions/save', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ baseId: AIRTABLE_BASE, table: tbl.name, fields })
+    });
+    const d = await r.json();
+    if (d.success) {
+      status.style.display = 'block';
+      status.style.color = 'var(--success-text)';
+      status.textContent = `Saved to ${tbl.label} ✓`;
+      btn.textContent = 'Saved ✓';
+    } else {
+      throw new Error(d.error || 'Save failed');
+    }
+  } catch(err) {
+    status.style.display = 'block';
+    status.style.color = 'var(--danger-text)';
+    status.textContent = `Failed: ${err.message}`;
+    btn.disabled = false;
+    btn.textContent = 'Try again';
+  }
 }
 
 // ── Init ──────────────────────────────────────────────────
