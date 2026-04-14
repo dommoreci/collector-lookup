@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<meta name="version" content="1.1.0">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -961,12 +962,32 @@ async function saveToAirtable() {
   const btn = document.getElementById('save-btn');
   const status = document.getElementById('save-status');
   btn.disabled = true;
-  btn.textContent = 'Saving...';
+  btn.textContent = 'Uploading photo...';
   status.style.display = 'none';
 
   const tbl = TABLES[selectedTable];
   const pricePaid = parseFloat(document.getElementById('price-paid').value) || 0;
   const location = document.getElementById('save-location').value.trim();
+
+  // Step 1: Upload photo to Cloudinary
+  let photoUrl = null;
+  if (imgB64) {
+    try {
+      const uploadResp = await fetch('/.netlify/functions/upload-photo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          imageBase64: imgB64,
+          mimeType: imgMime,
+          folder: 'collector-app/' + tbl.name.replace(/\s/g, '-').toLowerCase()
+        })
+      });
+      const uploadData = await uploadResp.json();
+      if (uploadData.url) photoUrl = uploadData.url;
+    } catch {}
+  }
+
+  btn.textContent = 'Saving to collection...';
 
   const fields = {
     'Title': currentResult.name || '',
@@ -980,7 +1001,6 @@ async function saveToAirtable() {
     'Trend': currentResult.trend || ''
   };
 
-  // Add Packaging Type for HW tables
   if (tbl.hw) {
     fields['Packaging Type'] = state.pkg === 'loose' ? 'Loose' : 'Carded';
   }
@@ -989,13 +1009,13 @@ async function saveToAirtable() {
     const r = await fetch('/.netlify/functions/save', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ baseId: AIRTABLE_BASE, table: tbl.name, fields })
+      body: JSON.stringify({ baseId: AIRTABLE_BASE, table: tbl.name, fields, photoUrl })
     });
     const d = await r.json();
     if (d.success) {
       status.style.display = 'block';
       status.style.color = 'var(--success-text)';
-      status.textContent = `Saved to ${tbl.label} ✓`;
+      status.textContent = photoUrl ? `Saved to ${tbl.label} with photo ✓` : `Saved to ${tbl.label} ✓`;
       btn.textContent = 'Saved ✓';
     } else {
       throw new Error(d.error || 'Save failed');
