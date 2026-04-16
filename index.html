@@ -695,7 +695,15 @@ SUPER TH DETECTION — look for all three:
 1. Real Rider rubber tires (not plastic) — strongest indicator
 2. Spectraflame metallic paint (deep shifting sheen)
 3. TH logo or $ symbol tampo on body
-All three = Super TH. TH logo + plastic wheels = regular TH only.` : '';
+All three = Super TH. TH logo + plastic wheels = regular TH only.
+
+BLACKWALL DETECTION — look for:
+1. Black plastic wheels (no red stripe, no rubber Real Riders)
+2. Casting style typical of 1977-1988 era
+3. Flat or simple paint (not deep Spectraflame, not modern detailed tampos)
+4. Hong Kong, Malaysia, or early USA base if visible
+If black plastic wheels + late 70s/80s casting: set is_blackwall to true.
+Blackwalls are distinct from Redlines (which have red stripe on wheels).` : '';
 
   const prompt = `You are an expert collector appraiser for ${typeLabel}s. ${condCtx}${hwRules}
 
@@ -709,6 +717,7 @@ Respond ONLY with valid JSON — no markdown, no code fences.
   "condition_estimate": "AI visual condition assessment",
   "grade_equivalent": "e.g. CGC 9.2 or AFA 85",
   "is_super_th": true/false,
+  "is_blackwall": true/false,
   "has_real_riders": true/false,
   "has_spectraflame": true/false,
   "base_mid_carded_nm": integer,
@@ -797,6 +806,8 @@ function renderResult(r, ebayItems, usedLive, lowestAsk) {
         ${r.has_real_riders ? '<span class="badge b-rr">Real Riders ✓</span>' : ''}
         ${r.has_spectraflame ? '<span class="badge b-sf">Spectraflame ✓</span>' : ''}
       </div>`
+    : r.is_blackwall
+    ? `<div style="margin-bottom:10px"><span class="badge" style="background:var(--bg2);color:var(--text2);border:1px solid var(--border2)">Blackwall era</span></div>`
     : (r.key_issue ? `<div style="margin-bottom:10px"><span class="badge b-key">Key issue</span></div>` : '');
 
   const refNote = state.type==='hotwheels' && state.pkg==='loose' && r.base_mid_carded_nm
@@ -810,6 +821,7 @@ function renderResult(r, ebayItems, usedLive, lowestAsk) {
       <div class="slabel">Hot Wheels detection</div>
       <div class="drow"><span class="dlabel">Real Rider wheels</span><span class="dval" style="color:${r.has_real_riders?'var(--success-text)':'var(--text3)'}">${r.has_real_riders?'Detected ✓':'Not detected'}</span></div>
       <div class="drow"><span class="dlabel">Spectraflame paint</span><span class="dval" style="color:${r.has_spectraflame?'var(--success-text)':'var(--text3)'}">${r.has_spectraflame?'Detected ✓':'Not detected'}</span></div>
+      <div class="drow"><span class="dlabel">Blackwall era</span><span class="dval" style="color:${r.is_blackwall?'var(--text)':'var(--text3)'}">${r.is_blackwall?'Detected ✓':'Not detected'}</span></div>
       <div class="drow"><span class="dlabel">Super TH</span><span class="dval" style="color:${r.is_super_th?'var(--warning-text)':'var(--text3)'}">${r.is_super_th?'Confirmed ✓':'Not confirmed'}</span></div>
       <div class="drow"><span class="dlabel">Your condition</span><span class="dval">${getCondLabel()}</span></div>
     </div>` : `
@@ -909,12 +921,13 @@ function renderResult(r, ebayItems, usedLive, lowestAsk) {
 // ── Airtable config ───────────────────────────────────────
 const AIRTABLE_BASE = 'appPczKYLAuKzCNw8';
 const TABLES = {
-  comics:    { name: 'Comics',      label: 'Comics',      hw: false },
-  mainline:  { name: 'HW Mainline', label: 'HW Mainline', hw: true  },
-  premium:   { name: 'HW Premium',  label: 'HW Premium',  hw: true  },
-  thsth:     { name: 'HW TH-STH',  label: 'HW TH-STH',   hw: true  },
-  redline:   { name: 'HW Redline',  label: 'HW Redline',  hw: true  },
-  collection:{ name: 'Collection',  label: 'Collection',  hw: false }
+  comics:    { name: 'Comics',       label: 'Comics',       hw: false },
+  mainline:  { name: 'HW Mainline',  label: 'HW Mainline',  hw: true  },
+  blackwall: { name: 'HW Blackwall', label: 'HW Blackwall', hw: true  },
+  premium:   { name: 'HW Premium',   label: 'HW Premium',   hw: true  },
+  thsth:     { name: 'HW TH-STH',   label: 'HW TH-STH',    hw: true  },
+  redline:   { name: 'HW Redline',   label: 'HW Redline',   hw: true  },
+  collection:{ name: 'Collection',   label: 'Collection',   hw: false }
 };
 
 let currentResult = null;
@@ -924,6 +937,7 @@ function suggestTable(result) {
   if (!result) return 'collection';
   if (state.type === 'comic') return 'comics';
   if (result.is_super_th) return 'thsth';
+  if (result.is_blackwall) return 'blackwall';
   if (result.has_spectraflame || (result.name || '').toLowerCase().includes('redline')) return 'redline';
   if ((result.name || '').toLowerCase().includes('car culture') ||
       (result.name || '').toLowerCase().includes('premium') ||
