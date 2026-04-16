@@ -561,8 +561,8 @@ function onFile(inp) {
   reader.onload = e => {
     const img = new Image();
     img.onload = () => {
-      // Compress to max 1200px on longest side, 0.82 quality JPEG
-      const MAX = 1200;
+      // Compress aggressively — target well under 4MB base64
+      let MAX = 1000, quality = 0.75;
       let w = img.width, h = img.height;
       if (w > MAX || h > MAX) {
         if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
@@ -571,8 +571,22 @@ function onFile(inp) {
       const canvas = document.createElement('canvas');
       canvas.width = w; canvas.height = h;
       canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-      const compressed = canvas.toDataURL('image/jpeg', 0.82);
-      imgB64 = compressed.split(',')[1];
+      let compressed = canvas.toDataURL('image/jpeg', quality);
+      // If still too large, compress harder
+      let b64 = compressed.split(',')[1];
+      if (b64.length > 3500000) {
+        compressed = canvas.toDataURL('image/jpeg', 0.55);
+        b64 = compressed.split(',')[1];
+      }
+      if (b64.length > 3500000) {
+        // Shrink canvas further
+        const c2 = document.createElement('canvas');
+        c2.width = Math.round(w * 0.7); c2.height = Math.round(h * 0.7);
+        c2.getContext('2d').drawImage(canvas, 0, 0, c2.width, c2.height);
+        compressed = c2.toDataURL('image/jpeg', 0.6);
+        b64 = compressed.split(',')[1];
+      }
+      imgB64 = b64;
       imgMime = 'image/jpeg';
       document.getElementById('prev-img').src = compressed;
       show('s-preview'); setType(state.type);
