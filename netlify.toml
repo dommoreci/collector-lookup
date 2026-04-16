@@ -1,3 +1,25 @@
 [build]
   publish = "."
   functions = "netlify/functions"
+
+[functions."analyze"]
+  timeout = 26
+
+[functions."upload-photo"]
+  timeout = 26
+
+[functions."save"]
+  timeout = 26
+
+[functions."websearch"]
+  timeout = 26
+
+[[headers]]
+  for = "/index.html"
+  [headers.values]
+    Cache-Control = "no-cache, no-store, must-revalidate"
+
+[[headers]]
+  for = "/*.js"
+  [headers.values]
+    Cache-Control = "no-cache, no-store, must-revalidate"
