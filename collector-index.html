@@ -929,6 +929,37 @@ function renderResult(r, ebayItems, usedLive, lowestAsk) {
         <div><div class="ext-name">Invaluable Price Archive</div><div class="ext-sub">Your account · auction records</div></div>${extIcon}
       </a>
     </div>
+
+    ${state.type === 'hotwheels' && r.has_spectraflame && !r.is_super_th ? `
+    <div class="card">
+      <div class="slabel" style="margin-bottom:6px">Redline references</div>
+      <div style="font-size:11px;color:var(--text3);margin-bottom:10px">Specialist resources for 1968–1977 Redline era</div>
+      <a class="ext-link" href="https://redlinepriceguide.com/?s=${encodeURIComponent(r.ebay_search_query||r.name)}" target="_blank" rel="noopener">
+        <div><div class="ext-name">Redline Price Guide</div><div class="ext-sub">Sold prices + active listings · Redline specialist</div></div>${extIcon}
+      </a>
+      <a class="ext-link" href="https://onlineredlineguide.com/search/?q=${encodeURIComponent(r.name)}" target="_blank" rel="noopener">
+        <div><div class="ext-name">Online Redline Guide</div><div class="ext-sub">Casting + variation identification</div></div>${extIcon}
+      </a>
+      <a class="ext-link" href="https://www.hallsguide.com/?s=${encodeURIComponent(r.name)}" target="_blank" rel="noopener">
+        <div><div class="ext-name">Hall's Guide</div><div class="ext-sub">Year-by-year price archive</div></div>${extIcon}
+      </a>
+    </div>` : ''}
+
+    ${state.type === 'hotwheels' && r.is_blackwall ? `
+    <div class="card">
+      <div class="slabel" style="margin-bottom:6px">Blackwall references</div>
+      <div style="font-size:11px;color:var(--text3);margin-bottom:10px">Resources for 1977–1988 Blackwall era</div>
+      <a class="ext-link" href="https://www.hallsguide.com/?s=${encodeURIComponent(r.name)}" target="_blank" rel="noopener">
+        <div><div class="ext-name">Hall's Guide</div><div class="ext-sub">Covers Blackwall era year by year</div></div>${extIcon}
+      </a>
+      <a class="ext-link" href="https://hotwheels.collectionhero.com/gallery_listings.php?keyword=${encodeURIComponent(r.name)}" target="_blank" rel="noopener">
+        <div><div class="ext-name">Collection Hero</div><div class="ext-sub">Actual sold prices · Blackwall search</div></div>${extIcon}
+      </a>
+      <a class="ext-link" href="https://hwpriceguide.com/?s=${encodeURIComponent(r.name)}" target="_blank" rel="noopener">
+        <div><div class="ext-name">HW Price Guide</div><div class="ext-sub">Current market values</div></div>${extIcon}
+      </a>
+    </div>` : ''}
+
     ${watchTip}`;
 }
 
