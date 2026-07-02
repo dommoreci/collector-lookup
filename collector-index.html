@@ -983,10 +983,20 @@ function suggestTable(result) {
   if (state.type === 'comic') return 'comics';
   if (result.is_super_th) return 'thsth';
   if (result.is_blackwall) return 'blackwall';
-  if (result.has_spectraflame || (result.name || '').toLowerCase().includes('redline')) return 'redline';
-  if ((result.name || '').toLowerCase().includes('car culture') ||
-      (result.name || '').toLowerCase().includes('premium') ||
-      (result.name || '').toLowerCase().includes('rlc')) return 'premium';
+  // Redline detection: Spectraflame OR era keywords in name/details
+  const nameDetails = ((result.name || '') + ' ' + (result.details || '')).toLowerCase();
+  const isRedlineEra = result.has_spectraflame ||
+    nameDetails.includes('redline') ||
+    nameDetails.includes('flying colors') ||
+    nameDetails.includes('1968') || nameDetails.includes('1969') ||
+    nameDetails.includes('1970') || nameDetails.includes('1971') ||
+    nameDetails.includes('1972') || nameDetails.includes('1973') ||
+    nameDetails.includes('1974') || nameDetails.includes('1975') ||
+    nameDetails.includes('1976') || nameDetails.includes('1977');
+  if (isRedlineEra) return 'redline';
+  if (nameDetails.includes('car culture') ||
+      nameDetails.includes('premium') ||
+      nameDetails.includes('rlc')) return 'premium';
   return 'mainline';
 }
 
